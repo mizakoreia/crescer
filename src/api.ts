@@ -18,6 +18,16 @@ export interface DailyRecord {
 
 export interface Consent { id: string; child_id: string; scope: string; text_version: string; revoked_at: string | null }
 export interface LivingEntry { id: string; child_id: string; author_id: string; section: string; content: string; created_at: string }
+export interface HealthCondition { id: string; child_id: string; kind: string; name: string; severity: string; instruction: string | null }
+export interface EmergencyContact { id: string; child_id: string; name: string; relation: string | null; phone: string }
+export interface Medication {
+  id: string; child_id: string; name: string; dose: string; schedule: string; instruction: string | null;
+  medication_authorizations: { id: string; revoked_at: string | null }[];
+}
+export interface MedAdministration {
+  id: string; medication_id: string; child_id: string; given_by: string; given_at: string;
+  skipped: boolean; note: string | null; addendum_of: string | null;
+}
 export interface Observation {
   id: string; child_id: string; author_id: string; fact: string; context: string | null;
   interpretation: string | null; domains: string[]; continuity: string | null;
@@ -93,6 +103,62 @@ export const api = createApi({
       queryFn: (rec) => run<DailyRecord>(supabase.from('daily_records').upsert(rec as never).select().single()),
       invalidatesTags: ['Daily'],
     }),
+    health: b.query<{ conditions: HealthCondition[]; contacts: EmergencyContact[]; medications: Medication[]; administrations: MedAdministration[] }, string>({
+      queryFn: async (childId) => {
+        const [c1, c2, c3, c4] = await Promise.all([
+          supabase.from('health_conditions').select('*').eq('child_id', childId),
+          supabase.from('emergency_contacts').select('*').eq('child_id', childId),
+          supabase.from('medications').select('*, medication_authorizations(id, revoked_at)').eq('child_id', childId),
+          supabase.from('medication_administrations').select('*').eq('child_id', childId)
+            .order('given_at', { ascending: false }).limit(20),
+        ]);
+        const err = c1.error ?? c2.error ?? c3.error ?? c4.error;
+        if (err) return { error: { message: err.message } };
+        return {
+          data: {
+            conditions: (c1.data ?? []) as HealthCondition[],
+            contacts: (c2.data ?? []) as EmergencyContact[],
+            medications: (c3.data ?? []) as Medication[],
+            administrations: (c4.data ?? []) as MedAdministration[],
+          },
+        };
+      },
+      providesTags: ['Health'],
+    }),
+    addHealthCondition: b.mutation<HealthCondition, { child_id: string; kind: string; name: string; severity: string; instruction?: string }>({
+      queryFn: async (input) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run<HealthCondition>(supabase.from('health_conditions')
+          .insert({ ...input, created_by: auth.user!.id }).select().single());
+      },
+      invalidatesTags: ['Health'],
+    }),
+    addEmergencyContact: b.mutation<EmergencyContact, { child_id: string; name: string; relation?: string; phone: string }>({
+      queryFn: (input) => run<EmergencyContact>(supabase.from('emergency_contacts').insert(input).select().single()),
+      invalidatesTags: ['Health'],
+    }),
+    addMedication: b.mutation<Medication, { child_id: string; name: string; dose: string; schedule: string; instruction?: string }>({
+      queryFn: async (input) => {
+        const { data: auth } = await supabase.auth.getUser();
+        // guardian cria medicamento + autorização junto (fluxo da spec: instrução + autorização)
+        const res = await run<Medication>(supabase.from('medications')
+          .insert({ ...input, created_by: auth.user!.id }).select('*, medication_authorizations(id, revoked_at)').single());
+        if ('error' in res) return res;
+        await supabase.from('medication_authorizations')
+          .insert({ medication_id: res.data.id, guardian_id: auth.user!.id });
+        return res;
+      },
+      invalidatesTags: ['Health'],
+    }),
+    recordAdministration: b.mutation<MedAdministration, { medication_id: string; child_id: string; skipped?: boolean; note?: string }>({
+      queryFn: async (input) => {
+        const { data: auth } = await supabase.auth.getUser();
+        // sem autorização ativa, o trigger do banco rejeita — a UI só reflete
+        return run<MedAdministration>(supabase.from('medication_administrations')
+          .insert({ ...input, given_by: auth.user!.id }).select().single());
+      },
+      invalidatesTags: ['Health'],
+    }),
     observations: b.query<Observation[], string>({
       queryFn: (childId) =>
         run(supabase.from('pedagogical_observations').select('*')
@@ -134,6 +200,8 @@ export const {
   useConsentsQuery, useGrantConsentMutation, useRevokeConsentMutation,
   useLivingEntriesQuery, useAddLivingEntryMutation,
   useObservationsQuery, useEnrichObservationMutation, useUpdateObservationMutation,
+  useHealthQuery, useAddHealthConditionMutation, useAddEmergencyContactMutation,
+  useAddMedicationMutation, useRecordAdministrationMutation,
 } = api;
 
 // hook: criança selecionada (default = primeira)

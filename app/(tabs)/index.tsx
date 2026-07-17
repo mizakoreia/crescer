@@ -1,8 +1,8 @@
 import { Text, ScrollView, Pressable, View, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { Screen, Card, Chip } from '../../src/ui';
-import { useMyChildrenQuery } from '../../src/api';
+import { Screen, Card, Chip, CriticalBanner } from '../../src/ui';
+import { useMyChildrenQuery, useHealthQuery } from '../../src/api';
 import { RootState, selectChild } from '../../src/store';
 import { supabase } from '../../src/supabase';
 import { colors, spacing, font } from '../../src/theme';
@@ -12,6 +12,8 @@ export default function Hoje() {
   const childId = useSelector((s: RootState) => s.session.childId) ?? children[0]?.id ?? null;
   const dispatch = useDispatch();
   const child = children.find((c) => c.id === childId);
+  const { data: health } = useHealthQuery(childId!, { skip: !childId });
+  const critical = health?.conditions.filter((c) => c.severity === 'critica') ?? [];
 
   return (
     <Screen title="Hoje">
@@ -27,11 +29,19 @@ export default function Hoje() {
 
         {child ? (
           <>
+            {critical.map((c) => (
+              <CriticalBanner key={c.id} text={`${c.name}${c.instruction ? ` — ${c.instruction}` : ''}`} />
+            ))}
             <Card>
               <Text style={[font.body, { fontWeight: '600' }]}>{child.name}</Text>
               <Text style={font.small}>Nascimento: {child.birthdate}</Text>
             </Card>
             <View style={s.actions}>
+              <Link href={`/saude/${child.id}`} asChild>
+                <Pressable style={[s.action, s.actionHealth]} accessibilityRole="button">
+                  <Text style={[s.actionText, { color: colors.critical }]}>Saúde e emergência</Text>
+                </Pressable>
+              </Link>
               <Link href={`/convidar/${child.id}`} asChild>
                 <Pressable style={s.action} accessibilityRole="button">
                   <Text style={s.actionText}>Convidar responsável</Text>
@@ -79,5 +89,6 @@ const s = StyleSheet.create({
     paddingVertical: spacing.sm, minHeight: 44, justifyContent: 'center',
   },
   actionText: { ...font.body, color: colors.primary, fontWeight: '600' },
+  actionHealth: { backgroundColor: colors.criticalBg },
   signOut: { ...font.small, textAlign: 'center', marginTop: spacing.xl, textDecorationLine: 'underline' },
 });
