@@ -28,6 +28,11 @@ export interface MedAdministration {
   id: string; medication_id: string; child_id: string; given_by: string; given_at: string;
   skipped: boolean; note: string | null; addendum_of: string | null;
 }
+export interface CalendarEvent { id: string; child_id: string; kind: string; title: string; starts_at: string; ends_at: string | null; note: string | null }
+export interface ChecklistItem { id: string; child_id: string; name: string; recurring: boolean; low_stock: boolean; confirmed: boolean }
+export interface WorkPeriod { id: string; child_id: string; professional_id: string; started_at: string; ended_at: string | null; break_min: number; overtime: boolean }
+export interface Expense { id: string; child_id: string; kind: string; amount_cents: number; note: string | null; occurred_on: string }
+export interface Payment { id: string; child_id: string; period_month: string; amount_cents: number; status: string; confirmed_by_guardian: boolean }
 export interface Observation {
   id: string; child_id: string; author_id: string; fact: string; context: string | null;
   interpretation: string | null; domains: string[]; continuity: string | null;
@@ -102,6 +107,75 @@ export const api = createApi({
     upsertDailyRecord: b.mutation<DailyRecord, Partial<DailyRecord>>({
       queryFn: (rec) => run<DailyRecord>(supabase.from('daily_records').upsert(rec as never).select().single()),
       invalidatesTags: ['Daily'],
+    }),
+    agenda: b.query<{ events: CalendarEvent[]; items: ChecklistItem[] }, string>({
+      queryFn: async (childId) => {
+        const [e, i] = await Promise.all([
+          supabase.from('calendar_events').select('*').eq('child_id', childId)
+            .gte('starts_at', new Date().toISOString().slice(0, 10)).order('starts_at').limit(50),
+          supabase.from('checklist_items').select('*').eq('child_id', childId).order('name'),
+        ]);
+        const err = e.error ?? i.error;
+        if (err) return { error: { message: err.message } };
+        return { data: { events: (e.data ?? []) as CalendarEvent[], items: (i.data ?? []) as ChecklistItem[] } };
+      },
+      providesTags: ['Agenda'],
+    }),
+    addEvent: b.mutation<CalendarEvent, { child_id: string; kind: string; title: string; starts_at: string; note?: string }>({
+      queryFn: async (input) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run<CalendarEvent>(supabase.from('calendar_events')
+          .insert({ ...input, created_by: auth.user!.id }).select().single());
+      },
+      invalidatesTags: ['Agenda'],
+    }),
+    addChecklistItem: b.mutation<ChecklistItem, { child_id: string; name: string; recurring?: boolean }>({
+      queryFn: async (input) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run<ChecklistItem>(supabase.from('checklist_items')
+          .insert({ ...input, created_by: auth.user!.id }).select().single());
+      },
+      invalidatesTags: ['Agenda'],
+    }),
+    updateChecklistItem: b.mutation<ChecklistItem, Partial<ChecklistItem> & { id: string }>({
+      queryFn: ({ id, ...patch }) =>
+        run<ChecklistItem>(supabase.from('checklist_items').update(patch).eq('id', id).select().single()),
+      invalidatesTags: ['Agenda'],
+    }),
+    work: b.query<{ periods: WorkPeriod[]; expenses: Expense[]; payments: Payment[] }, string>({
+      queryFn: async (childId) => {
+        const [p, e, pay] = await Promise.all([
+          supabase.from('work_periods').select('*').eq('child_id', childId).order('started_at', { ascending: false }).limit(60),
+          supabase.from('expenses').select('*').eq('child_id', childId).order('occurred_on', { ascending: false }).limit(60),
+          supabase.from('payments').select('*').eq('child_id', childId).order('period_month', { ascending: false }),
+        ]);
+        const err = p.error ?? e.error ?? pay.error;
+        if (err) return { error: { message: err.message } };
+        return { data: { periods: (p.data ?? []) as WorkPeriod[], expenses: (e.data ?? []) as Expense[], payments: (pay.data ?? []) as Payment[] } };
+      },
+      providesTags: ['Work'],
+    }),
+    startWorkPeriod: b.mutation<WorkPeriod, { child_id: string }>({
+      queryFn: async ({ child_id }) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run<WorkPeriod>(supabase.from('work_periods')
+          .insert({ child_id, professional_id: auth.user!.id, started_at: new Date().toISOString() }).select().single());
+      },
+      invalidatesTags: ['Work'],
+    }),
+    endWorkPeriod: b.mutation<WorkPeriod, { id: string; break_min?: number; overtime?: boolean }>({
+      queryFn: ({ id, ...patch }) =>
+        run<WorkPeriod>(supabase.from('work_periods')
+          .update({ ended_at: new Date().toISOString(), ...patch }).eq('id', id).select().single()),
+      invalidatesTags: ['Work'],
+    }),
+    addExpense: b.mutation<Expense, { child_id: string; kind: string; amount_cents: number; note?: string }>({
+      queryFn: async (input) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run<Expense>(supabase.from('expenses')
+          .insert({ ...input, professional_id: auth.user!.id }).select().single());
+      },
+      invalidatesTags: ['Work'],
     }),
     health: b.query<{ conditions: HealthCondition[]; contacts: EmergencyContact[]; medications: Medication[]; administrations: MedAdministration[] }, string>({
       queryFn: async (childId) => {
@@ -202,6 +276,8 @@ export const {
   useObservationsQuery, useEnrichObservationMutation, useUpdateObservationMutation,
   useHealthQuery, useAddHealthConditionMutation, useAddEmergencyContactMutation,
   useAddMedicationMutation, useRecordAdministrationMutation,
+  useAgendaQuery, useAddEventMutation, useAddChecklistItemMutation, useUpdateChecklistItemMutation,
+  useWorkQuery, useStartWorkPeriodMutation, useEndWorkPeriodMutation, useAddExpenseMutation,
 } = api;
 
 // hook: criança selecionada (default = primeira)
