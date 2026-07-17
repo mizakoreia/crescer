@@ -81,8 +81,9 @@ export const api = createApi({
     }),
     careLinks: b.query<{ id: string; user_id: string; role: string; revoked_at: string | null; profiles: { name: string } | null }[], string>({
       queryFn: async (childId) => {
+        // desambigua o embed: care_links tem 2 FKs para profiles (user_id e invited_by)
         const { data, error } = await supabase.from('care_links')
-          .select('id, user_id, role, revoked_at, profiles(name)').eq('child_id', childId);
+          .select('id, user_id, role, revoked_at, profiles:care_links_user_id_fkey(name)').eq('child_id', childId);
         if (error) return { error: { message: error.message } };
         // supabase-js tipa a relação como array; normaliza para objeto único
         return {
