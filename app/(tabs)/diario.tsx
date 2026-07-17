@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Text, TextInput, ScrollView, View, Pressable, Switch, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { Screen, Card, Chip, PrivateBadge } from '../../src/ui';
-import { useChildId, useDailyRecordsQuery, useUpsertDailyRecordMutation, DailyRecord } from '../../src/api';
+import {
+  useChildId, useDailyRecordsQuery, useUpsertDailyRecordMutation, DailyRecord,
+  useConsentsQuery, useEnrichObservationMutation,
+} from '../../src/api';
 import { colors, spacing, radius, font } from '../../src/theme';
 
 const CATEGORIAS = ['alimentacao', 'sono', 'higiene', 'atividade', 'passeio', 'leitura', 'saude', 'observacao'] as const;
@@ -15,6 +19,16 @@ export default function Diario() {
   const today = new Date().toISOString().slice(0, 10);
   const { data: records = [] } = useDailyRecordsQuery({ childId: childId!, day: today }, { skip: !childId });
   const [upsert] = useUpsertDailyRecordMutation();
+  const { data: consents = [] } = useConsentsQuery(childId!, { skip: !childId });
+  const [enrich, { isLoading: enriching }] = useEnrichObservationMutation();
+  // gate: sem consentimento de recursos automáticos, o botão nem aparece (RF-09)
+  const aiAllowed = consents.some((c) => c.scope === 'automated_features');
+  const enrichable = records.filter((r) => r.visibility !== 'private_professional' && r.note);
+
+  const doEnrich = async () => {
+    const res = await enrich({ child_id: childId!, record_ids: enrichable.map((r) => r.id) });
+    if ('data' in res && res.data) router.push(`/observacao/${res.data.id}`);
+  };
 
   const [cat, setCat] = useState<string | null>(null);
   const [note, setNote] = useState('');
@@ -93,6 +107,14 @@ export default function Diario() {
           </Card>
         )}
 
+        {aiAllowed && enrichable.length > 0 && (
+          <Pressable style={s.enrich} onPress={doEnrich} disabled={enriching} accessibilityRole="button">
+            <Text style={s.enrichText}>
+              {enriching ? 'Escrevendo narrativa…' : '✨ Enriquecer em narrativa pedagógica'}
+            </Text>
+          </Pressable>
+        )}
+
         <Text style={[font.title, { fontSize: 18, marginTop: spacing.md }]}>Hoje</Text>
         {records.length === 0 && <Text style={font.small}>Nenhum registro ainda.</Text>}
         {records.map((r) => (
@@ -125,4 +147,10 @@ const s = StyleSheet.create({
     alignItems: 'center', minHeight: 48, justifyContent: 'center', marginBottom: spacing.xs,
   },
   buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  enrich: {
+    backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.primary,
+    borderRadius: radius.md, padding: spacing.md, alignItems: 'center',
+    minHeight: 48, justifyContent: 'center', marginTop: spacing.sm,
+  },
+  enrichText: { ...font.body, color: colors.primary, fontWeight: '600' },
 });

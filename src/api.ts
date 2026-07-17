@@ -18,6 +18,12 @@ export interface DailyRecord {
 
 export interface Consent { id: string; child_id: string; scope: string; text_version: string; revoked_at: string | null }
 export interface LivingEntry { id: string; child_id: string; author_id: string; section: string; content: string; created_at: string }
+export interface Observation {
+  id: string; child_id: string; author_id: string; fact: string; context: string | null;
+  interpretation: string | null; domains: string[]; continuity: string | null;
+  origin: 'manual' | 'assisted'; source_record_ids: string[]; low_confidence: boolean;
+  review_state: 'draft' | 'done' | 'shared'; created_at: string;
+}
 
 export const api = createApi({
   baseQuery: fakeBaseQuery<{ message: string }>(),
@@ -87,6 +93,24 @@ export const api = createApi({
       queryFn: (rec) => run<DailyRecord>(supabase.from('daily_records').upsert(rec as never).select().single()),
       invalidatesTags: ['Daily'],
     }),
+    observations: b.query<Observation[], string>({
+      queryFn: (childId) =>
+        run(supabase.from('pedagogical_observations').select('*')
+          .eq('child_id', childId).order('created_at', { ascending: false })),
+      providesTags: ['Obs'],
+    }),
+    enrichObservation: b.mutation<Observation, { child_id: string; record_ids: string[] }>({
+      queryFn: async (body) => {
+        const { data, error } = await supabase.functions.invoke('enrich-observation', { body });
+        return error ? { error: { message: error.message } } : { data: data as Observation };
+      },
+      invalidatesTags: ['Obs'],
+    }),
+    updateObservation: b.mutation<Observation, Partial<Observation> & { id: string }>({
+      queryFn: ({ id, ...patch }) =>
+        run<Observation>(supabase.from('pedagogical_observations').update(patch).eq('id', id).select().single()),
+      invalidatesTags: ['Obs'],
+    }),
     livingEntries: b.query<LivingEntry[], string>({
       queryFn: (childId) =>
         run(supabase.from('living_profile_entries').select('*')
@@ -109,6 +133,7 @@ export const {
   useCreateChildMutation, useCreateInvitationMutation, useAcceptInvitationMutation,
   useConsentsQuery, useGrantConsentMutation, useRevokeConsentMutation,
   useLivingEntriesQuery, useAddLivingEntryMutation,
+  useObservationsQuery, useEnrichObservationMutation, useUpdateObservationMutation,
 } = api;
 
 // hook: criança selecionada (default = primeira)

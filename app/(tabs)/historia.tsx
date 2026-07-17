@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Text, TextInput, ScrollView, View, Pressable, StyleSheet } from 'react-native';
+import { Link } from 'expo-router';
 import { Screen, Card, Chip } from '../../src/ui';
-import { useChildId, useLivingEntriesQuery, useAddLivingEntryMutation } from '../../src/api';
+import { useChildId, useLivingEntriesQuery, useAddLivingEntryMutation, useObservationsQuery } from '../../src/api';
 import { colors, spacing, radius, font } from '../../src/theme';
 
 const SECOES = ['personalidade', 'preferencias', 'temperamento', 'interesses', 'comunicacao', 'habilidades', 'desafios', 'conquistas'] as const;
@@ -15,6 +16,7 @@ const LABEL: Record<string, string> = {
 export default function Historia() {
   const childId = useChildId();
   const { data: entries = [] } = useLivingEntriesQuery(childId!, { skip: !childId });
+  const { data: observations = [] } = useObservationsQuery(childId!, { skip: !childId });
   const [add, { isLoading }] = useAddLivingEntryMutation();
   const [section, setSection] = useState<string | null>(null);
   const [content, setContent] = useState('');
@@ -73,6 +75,28 @@ export default function Historia() {
         ))}
         {latestBySection.length === 0 && (
           <Text style={font.small}>O perfil vivo cresce com o tempo — comece por Interesses.</Text>
+        )}
+
+        {observations.length > 0 && (
+          <>
+            <Text style={[font.title, { fontSize: 18, marginTop: spacing.md, marginBottom: spacing.sm }]}>
+              Observações de desenvolvimento
+            </Text>
+            {observations.map((o) => (
+              <Link key={o.id} href={`/observacao/${o.id}`} asChild>
+                <Pressable accessibilityRole="button">
+                  <Card>
+                    <Text style={font.body} numberOfLines={3}>{o.fact}</Text>
+                    <Text style={font.small}>
+                      {new Date(o.created_at).toLocaleDateString('pt-BR')}
+                      {o.origin === 'assisted' ? ' · ✨ assistida' : ''}
+                      {' · '}{o.review_state === 'draft' ? 'rascunho' : o.review_state === 'done' ? 'revisada' : 'compartilhada'}
+                    </Text>
+                  </Card>
+                </Pressable>
+              </Link>
+            ))}
+          </>
         )}
       </ScrollView>
     </Screen>
