@@ -38,7 +38,7 @@ export default function Hoje() {
             </Card>
             <View style={s.actions}>
               <Link href={`/saude/${child.id}`} asChild>
-                <Pressable style={[s.action, s.actionHealth]} accessibilityRole="button">
+                <Pressable style={s.actionHealth} accessibilityRole="button">
                   <Text style={[s.actionText, { color: colors.critical }]}>Saúde e emergência</Text>
                 </Pressable>
               </Link>
@@ -94,6 +94,11 @@ const s = StyleSheet.create({
     paddingVertical: spacing.sm, minHeight: 44, justifyContent: 'center',
   },
   actionText: { ...font.body, color: colors.primary, fontWeight: '600' },
-  actionHealth: { backgroundColor: colors.criticalBg },
+  // objeto único (não array): Link asChild usa Slot, e array de estilos no
+  // filho do Slot quebra no react-native-web (CSSStyleDeclaration indexado).
+  actionHealth: {
+    backgroundColor: colors.criticalBg, borderRadius: 12, paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm, minHeight: 44, justifyContent: 'center',
+  },
   signOut: { ...font.small, textAlign: 'center', marginTop: spacing.xl, textDecorationLine: 'underline' },
 });
