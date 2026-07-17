@@ -135,7 +135,12 @@ export const api = createApi({
       providesTags: ['Daily'],
     }),
     upsertDailyRecord: b.mutation<DailyRecord, Partial<DailyRecord>>({
-      queryFn: (rec) => run<DailyRecord>(supabase.from('daily_records').upsert(rec as never).select().single()),
+      queryFn: async (rec) => {
+        // author_id é NOT NULL e a policy exige author_id = auth.uid()
+        const { data: auth } = await supabase.auth.getUser();
+        return run<DailyRecord>(supabase.from('daily_records')
+          .upsert({ author_id: auth.user!.id, ...rec } as never).select().single());
+      },
       invalidatesTags: ['Daily'],
     }),
     weeklyReport: b.query<WeeklyReport | null, { childId: string; weekStart: string }>({
