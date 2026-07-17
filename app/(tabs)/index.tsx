@@ -52,6 +52,11 @@ export default function Hoje() {
                   <Text style={s.actionText}>Consentimentos</Text>
                 </Pressable>
               </Link>
+              <Link href={`/resumo/${child.id}`} asChild>
+                <Pressable style={s.action} accessibilityRole="button">
+                  <Text style={s.actionText}>Resumo semanal</Text>
+                </Pressable>
+              </Link>
             </View>
           </>
         ) : (

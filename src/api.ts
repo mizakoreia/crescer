@@ -33,6 +33,10 @@ export interface ChecklistItem { id: string; child_id: string; name: string; rec
 export interface WorkPeriod { id: string; child_id: string; professional_id: string; started_at: string; ended_at: string | null; break_min: number; overtime: boolean }
 export interface Expense { id: string; child_id: string; kind: string; amount_cents: number; note: string | null; occurred_on: string }
 export interface Payment { id: string; child_id: string; period_month: string; amount_cents: number; status: string; confirmed_by_guardian: boolean }
+export interface WeeklyReport {
+  id: string; child_id: string; author_id: string; week_start: string; version: number;
+  content: Record<string, string>; state: 'draft' | 'done' | 'shared'; shared_at: string | null; pdf_path: string | null;
+}
 export interface Observation {
   id: string; child_id: string; author_id: string; fact: string; context: string | null;
   interpretation: string | null; domains: string[]; continuity: string | null;
@@ -107,6 +111,60 @@ export const api = createApi({
     upsertDailyRecord: b.mutation<DailyRecord, Partial<DailyRecord>>({
       queryFn: (rec) => run<DailyRecord>(supabase.from('daily_records').upsert(rec as never).select().single()),
       invalidatesTags: ['Daily'],
+    }),
+    weeklyReport: b.query<WeeklyReport | null, { childId: string; weekStart: string }>({
+      queryFn: async ({ childId, weekStart }) => {
+        const { data, error } = await supabase.from('weekly_reports').select('*')
+          .eq('child_id', childId).eq('week_start', weekStart)
+          .order('version', { ascending: false }).limit(1).maybeSingle();
+        return error ? { error: { message: error.message } } : { data: data as WeeklyReport | null };
+      },
+      providesTags: ['Report'],
+    }),
+    // composição automática (RF-08): só registros compartilháveis + observações revisadas
+    composeWeek: b.query<Record<string, string>, { childId: string; weekStart: string }>({
+      queryFn: async ({ childId, weekStart }) => {
+        const end = new Date(new Date(weekStart).getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
+        const [recs, obs] = await Promise.all([
+          supabase.from('daily_records').select('category, note, occurred_at')
+            .eq('child_id', childId).neq('visibility', 'private_professional')
+            .gte('occurred_at', weekStart).lt('occurred_at', end).order('occurred_at'),
+          supabase.from('pedagogical_observations').select('fact, interpretation, continuity, review_state')
+            .eq('child_id', childId).in('review_state', ['done', 'shared'])
+            .gte('created_at', weekStart).lt('created_at', end),
+        ]);
+        const err = recs.error ?? obs.error;
+        if (err) return { error: { message: err.message } };
+        const byCat: Record<string, number> = {};
+        for (const r of recs.data ?? []) byCat[r.category] = (byCat[r.category] ?? 0) + 1;
+        return {
+          data: {
+            rotina: Object.entries(byCat).map(([c, n]) => `${c}: ${n} registro(s)`).join('\n'),
+            experiencias: (recs.data ?? [])
+              .filter((r) => ['atividade', 'passeio', 'leitura'].includes(r.category) && r.note)
+              .map((r) => `• ${r.note}`).join('\n'),
+            observacoes: (obs.data ?? []).map((o) => `${o.fact}${o.interpretation ? `\n${o.interpretation}` : ''}`).join('\n\n'),
+            conquistas: '',
+            convites: (obs.data ?? []).filter((o) => o.continuity).map((o) => `• ${o.continuity}`).join('\n'),
+          },
+        };
+      },
+    }),
+    upsertWeeklyReport: b.mutation<WeeklyReport, Partial<WeeklyReport> & { child_id: string; week_start: string }>({
+      queryFn: async (input) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run<WeeklyReport>(supabase.from('weekly_reports')
+          .upsert({ author_id: auth.user!.id, ...input } as never, { onConflict: 'child_id,week_start,version' })
+          .select().single());
+      },
+      invalidatesTags: ['Report'],
+    }),
+    generateReportPdf: b.mutation<{ url: string }, { report_id: string }>({
+      queryFn: async (body) => {
+        const { data, error } = await supabase.functions.invoke('weekly-report-pdf', { body });
+        return error ? { error: { message: error.message } } : { data: data as { url: string } };
+      },
+      invalidatesTags: ['Report'],
     }),
     agenda: b.query<{ events: CalendarEvent[]; items: ChecklistItem[] }, string>({
       queryFn: async (childId) => {
@@ -278,6 +336,7 @@ export const {
   useAddMedicationMutation, useRecordAdministrationMutation,
   useAgendaQuery, useAddEventMutation, useAddChecklistItemMutation, useUpdateChecklistItemMutation,
   useWorkQuery, useStartWorkPeriodMutation, useEndWorkPeriodMutation, useAddExpenseMutation,
+  useWeeklyReportQuery, useComposeWeekQuery, useUpsertWeeklyReportMutation, useGenerateReportPdfMutation,
 } = api;
 
 // hook: criança selecionada (default = primeira)
