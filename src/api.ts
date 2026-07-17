@@ -17,6 +17,7 @@ export interface DailyRecord {
 }
 
 export interface Consent { id: string; child_id: string; scope: string; text_version: string; revoked_at: string | null }
+export interface LivingEntry { id: string; child_id: string; author_id: string; section: string; content: string; created_at: string }
 
 export const api = createApi({
   baseQuery: fakeBaseQuery<{ message: string }>(),
@@ -86,6 +87,20 @@ export const api = createApi({
       queryFn: (rec) => run<DailyRecord>(supabase.from('daily_records').upsert(rec as never).select().single()),
       invalidatesTags: ['Daily'],
     }),
+    livingEntries: b.query<LivingEntry[], string>({
+      queryFn: (childId) =>
+        run(supabase.from('living_profile_entries').select('*')
+          .eq('child_id', childId).order('created_at', { ascending: false })),
+      providesTags: ['Living'],
+    }),
+    addLivingEntry: b.mutation<LivingEntry, { child_id: string; section: string; content: string }>({
+      queryFn: async (input) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run<LivingEntry>(supabase.from('living_profile_entries')
+          .insert({ ...input, author_id: auth.user!.id }).select().single());
+      },
+      invalidatesTags: ['Living'],
+    }),
   }),
 });
 
@@ -93,4 +108,14 @@ export const {
   useMyChildrenQuery, useDailyRecordsQuery, useUpsertDailyRecordMutation,
   useCreateChildMutation, useCreateInvitationMutation, useAcceptInvitationMutation,
   useConsentsQuery, useGrantConsentMutation, useRevokeConsentMutation,
+  useLivingEntriesQuery, useAddLivingEntryMutation,
 } = api;
+
+// hook: criança selecionada (default = primeira)
+import { useSelector } from 'react-redux';
+import type { RootState } from './store';
+export function useChildId(): string | null {
+  const { data: children = [] } = useMyChildrenQuery();
+  const selected = useSelector((s: RootState) => s.session.childId);
+  return selected ?? children[0]?.id ?? null;
+}
