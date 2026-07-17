@@ -4,7 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { Screen, Card, Chip, CriticalBanner } from '../../src/ui';
 import {
   useHealthQuery, useAddHealthConditionMutation, useAddEmergencyContactMutation,
-  useAddMedicationMutation, useRecordAdministrationMutation,
+  useAddMedicationMutation, useAuthorizeMedicationMutation, useRecordAdministrationMutation,
 } from '../../src/api';
 import { colors, spacing, radius, font } from '../../src/theme';
 
@@ -16,6 +16,7 @@ export default function Saude() {
   const [addCondition] = useAddHealthConditionMutation();
   const [addContact] = useAddEmergencyContactMutation();
   const [addMedication] = useAddMedicationMutation();
+  const [authorize] = useAuthorizeMedicationMutation();
   const [record, { error: recordError }] = useRecordAdministrationMutation();
 
   const [form, setForm] = useState<FormKind>(null);
@@ -69,9 +70,14 @@ export default function Saude() {
                   <Text style={s.smallButtonText}>Registrar administração agora</Text>
                 </Pressable>
               ) : (
-                <Text style={[font.small, { color: colors.critical }]}>
-                  Sem autorização ativa do responsável — administração bloqueada.
-                </Text>
+                <>
+                  <Text style={[font.small, { color: colors.critical }]}>
+                    Sem autorização ativa do responsável — administração bloqueada.
+                  </Text>
+                  <Pressable style={s.smallButton} onPress={() => authorize(m.id)} accessibilityRole="button">
+                    <Text style={s.smallButtonText}>Autorizar (responsável legal)</Text>
+                  </Pressable>
+                </>
               )}
             </Card>
           );

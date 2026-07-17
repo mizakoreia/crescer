@@ -303,13 +303,18 @@ export const api = createApi({
     addMedication: b.mutation<Medication, { child_id: string; name: string; dose: string; schedule: string; instruction?: string }>({
       queryFn: async (input) => {
         const { data: auth } = await supabase.auth.getUser();
-        // guardian cria medicamento + autorização junto (fluxo da spec: instrução + autorização)
-        const res = await run<Medication>(supabase.from('medications')
+        // registro do medicamento; a autorização é um passo separado do responsável
+        return run<Medication>(supabase.from('medications')
           .insert({ ...input, created_by: auth.user!.id }).select('*, medication_authorizations(id, revoked_at)').single());
-        if ('error' in res) return res;
-        await supabase.from('medication_authorizations')
-          .insert({ medication_id: res.data.id, guardian_id: auth.user!.id });
-        return res;
+      },
+      invalidatesTags: ['Health'],
+    }),
+    // só o responsável legal consegue (RLS: has_role_link guardian)
+    authorizeMedication: b.mutation<unknown, string>({
+      queryFn: async (medication_id) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run(supabase.from('medication_authorizations')
+          .insert({ medication_id, guardian_id: auth.user!.id }).select().single());
       },
       invalidatesTags: ['Health'],
     }),
@@ -364,7 +369,7 @@ export const {
   useLivingEntriesQuery, useAddLivingEntryMutation,
   useObservationsQuery, useEnrichObservationMutation, useUpdateObservationMutation,
   useHealthQuery, useAddHealthConditionMutation, useAddEmergencyContactMutation,
-  useAddMedicationMutation, useRecordAdministrationMutation,
+  useAddMedicationMutation, useAuthorizeMedicationMutation, useRecordAdministrationMutation,
   useAgendaQuery, useAddEventMutation, useAddChecklistItemMutation, useUpdateChecklistItemMutation,
   useWorkQuery, useStartWorkPeriodMutation, useEndWorkPeriodMutation, useAddExpenseMutation,
   useWeeklyReportQuery, useComposeWeekQuery, useUpsertWeeklyReportMutation, useGenerateReportPdfMutation,
