@@ -52,15 +52,16 @@ export const api = createApi({
       queryFn: async (input) => {
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth.user!.id;
-        const res = await run<Child>(
-          supabase.from('children').insert({ ...input, created_by: uid }).select().single(),
-        );
-        if ('error' in res) return res;
+        // id gerado no cliente: sem .select()/RETURNING, que a policy de SELECT
+        // (has_active_link) barraria antes do care_link existir.
+        const id = crypto.randomUUID();
+        const ins = await supabase.from('children').insert({ id, ...input, created_by: uid });
+        if (ins.error) return { error: { message: ins.error.message } };
         // vínculo do criador como profissional
-        const link = await run(supabase.from('care_links')
-          .insert({ child_id: res.data.id, user_id: uid, role: 'professional' }));
-        if ('error' in link) return link;
-        return res;
+        const link = await supabase.from('care_links')
+          .insert({ child_id: id, user_id: uid, role: 'professional' });
+        if (link.error) return { error: { message: link.error.message } };
+        return { data: { id, name: input.name, birthdate: input.birthdate, pronoun: input.pronoun ?? null } };
       },
       invalidatesTags: ['Children'],
     }),
