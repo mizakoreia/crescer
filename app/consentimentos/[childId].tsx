@@ -1,7 +1,7 @@
-import { Text, Switch, View, StyleSheet } from 'react-native';
+import { Text, Switch, View, StyleSheet, Pressable, Share } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Screen, Card } from '../../src/ui';
-import { useConsentsQuery, useGrantConsentMutation, useRevokeConsentMutation } from '../../src/api';
+import { useConsentsQuery, useGrantConsentMutation, useRevokeConsentMutation, useExportChildDataMutation } from '../../src/api';
 import { colors, spacing, font } from '../../src/theme';
 
 // Consentimento granular, por finalidade, com exemplo concreto de efeito (spec §04)
@@ -17,6 +17,14 @@ export default function Consentimentos() {
   const { data: consents = [] } = useConsentsQuery(childId!);
   const [grant] = useGrantConsentMutation();
   const [revoke] = useRevokeConsentMutation();
+  const [exportData, { isLoading: exporting }] = useExportChildDataMutation();
+
+  const doExport = async () => {
+    const res = await exportData(childId!);
+    if ('data' in res && res.data) {
+      await Share.share({ message: JSON.stringify(res.data, null, 2), title: 'Exportação de dados' });
+    }
+  };
 
   const active = (scope: string) => consents.find((c) => c.scope === scope);
 
@@ -42,10 +50,21 @@ export default function Consentimentos() {
           </Card>
         );
       })}
+
+      <Pressable onPress={doExport} disabled={exporting} hitSlop={8} accessibilityRole="button">
+        <Text style={s.export}>{exporting ? 'Exportando…' : 'Exportar todos os dados (LGPD)'}</Text>
+      </Pressable>
+      <Text style={[font.small, { textAlign: 'center' }]}>
+        Para solicitar exclusão definitiva, fale com o suporte — o fluxo é verificável e documentado.
+      </Text>
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
+  export: {
+    ...font.body, color: colors.primary, fontWeight: '600', textAlign: 'center',
+    marginTop: spacing.lg, marginBottom: spacing.xs, textDecorationLine: 'underline',
+  },
 });

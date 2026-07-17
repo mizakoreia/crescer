@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Screen, Card } from '../../src/ui';
-import { useCreateInvitationMutation } from '../../src/api';
+import { useCreateInvitationMutation, useCareLinksQuery, useRevokeLinkMutation } from '../../src/api';
 import { colors, spacing, radius, font } from '../../src/theme';
 
 export default function Convidar() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const [email, setEmail] = useState('');
   const [invite, { data, error, isLoading }] = useCreateInvitationMutation();
+  const { data: links = [] } = useCareLinksQuery(childId!);
+  const [revoke] = useRevokeLinkMutation();
 
   return (
     <Screen title="Convidar responsável">
@@ -26,6 +28,26 @@ export default function Convidar() {
           <Text selectable style={s.token}>{data.token}</Text>
         </Card>
       )}
+
+      <Text style={[font.title, { fontSize: 18, marginTop: spacing.lg, marginBottom: spacing.sm }]}>
+        Quem tem acesso
+      </Text>
+      {links.map((l) => (
+        <Card key={l.id}>
+          <Text style={[font.body, { fontWeight: '600' }]}>
+            {l.profiles?.name ?? 'Usuário'} · {l.role === 'professional' ? 'profissional' : 'responsável'}
+          </Text>
+          {l.revoked_at ? (
+            <Text style={[font.small, { color: colors.critical }]}>Acesso revogado.</Text>
+          ) : (
+            <Pressable onPress={() => revoke(l.id)} hitSlop={8} accessibilityRole="button">
+              <Text style={[font.small, { color: colors.critical, textDecorationLine: 'underline' }]}>
+                Revogar acesso (efeito imediato)
+              </Text>
+            </Pressable>
+          )}
+        </Card>
+      ))}
     </Screen>
   );
 }

@@ -78,6 +78,31 @@ export const api = createApi({
       queryFn: (token) => run<string>(supabase.rpc('accept_invitation', { invite_token: token })),
       invalidatesTags: ['Children', 'Consents'],
     }),
+    careLinks: b.query<{ id: string; user_id: string; role: string; revoked_at: string | null; profiles: { name: string } | null }[], string>({
+      queryFn: async (childId) => {
+        const { data, error } = await supabase.from('care_links')
+          .select('id, user_id, role, revoked_at, profiles(name)').eq('child_id', childId);
+        if (error) return { error: { message: error.message } };
+        // supabase-js tipa a relação como array; normaliza para objeto único
+        return {
+          data: (data ?? []).map((l) => ({
+            ...l,
+            profiles: Array.isArray(l.profiles) ? (l.profiles[0] ?? null) : l.profiles,
+          })),
+        };
+      },
+      providesTags: ['Children'],
+    }),
+    revokeLink: b.mutation<unknown, string>({
+      queryFn: (id) => run(supabase.from('care_links').update({ revoked_at: new Date().toISOString() }).eq('id', id).select().single()),
+      invalidatesTags: ['Children'],
+    }),
+    exportChildData: b.mutation<Record<string, unknown>, string>({
+      queryFn: async (child_id) => {
+        const { data, error } = await supabase.functions.invoke('export-child-data', { body: { child_id } });
+        return error ? { error: { message: error.message } } : { data: data as Record<string, unknown> };
+      },
+    }),
     consents: b.query<Consent[], string>({
       queryFn: (childId) => run(supabase.from('consents').select('*').eq('child_id', childId).is('revoked_at', null)),
       providesTags: ['Consents'],
@@ -337,6 +362,7 @@ export const {
   useAgendaQuery, useAddEventMutation, useAddChecklistItemMutation, useUpdateChecklistItemMutation,
   useWorkQuery, useStartWorkPeriodMutation, useEndWorkPeriodMutation, useAddExpenseMutation,
   useWeeklyReportQuery, useComposeWeekQuery, useUpsertWeeklyReportMutation, useGenerateReportPdfMutation,
+  useCareLinksQuery, useRevokeLinkMutation, useExportChildDataMutation,
 } = api;
 
 // hook: criança selecionada (default = primeira)
