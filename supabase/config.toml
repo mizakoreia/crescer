@@ -1,0 +1,11 @@
+# project_id preenchido no `supabase link --project-ref <ref>`.
+project_id = "crescer"
+
+[functions.enrich-observation]
+verify_jwt = true
+
+[functions.weekly-report-pdf]
+verify_jwt = true
+
+[functions.export-child-data]
+verify_jwt = true
