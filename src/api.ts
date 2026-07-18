@@ -37,6 +37,9 @@ export interface WeeklyReport {
   id: string; child_id: string; author_id: string; week_start: string; version: number;
   content: Record<string, string>; state: 'draft' | 'done' | 'shared'; shared_at: string | null; pdf_path: string | null;
 }
+export interface FamilyMessage {
+  id: string; child_id: string; author_id: string; author_name: string; body: string; created_at: string;
+}
 export interface GuidanceNote {
   id: string; child_id: string; section: string; title: string; body: string;
   important: boolean; valid_until: string | null; created_by: string; created_at: string;
@@ -56,7 +59,7 @@ export interface Observation {
 
 export const api = createApi({
   baseQuery: fakeBaseQuery<{ message: string }>(),
-  tagTypes: ['Children', 'Daily', 'Living', 'Obs', 'Health', 'Agenda', 'Work', 'Report', 'Consents', 'Guidance'],
+  tagTypes: ['Children', 'Daily', 'Living', 'Obs', 'Health', 'Agenda', 'Work', 'Report', 'Consents', 'Guidance', 'Board'],
   endpoints: (b) => ({
     createChild: b.mutation<Child, { name: string; birthdate: string; pronoun?: string }>({
       queryFn: async (input) => {
@@ -399,6 +402,24 @@ export const api = createApi({
         run<Observation>(supabase.from('pedagogical_observations').update(patch).eq('id', id).select().single()),
       invalidatesTags: ['Obs'],
     }),
+    // Mural de recados da família (§10)
+    familyMessages: b.query<FamilyMessage[], string>({
+      queryFn: (childId) => run(supabase.from('family_messages').select('*')
+        .eq('child_id', childId).order('created_at', { ascending: false }).limit(100)),
+      providesTags: ['Board'],
+    }),
+    addFamilyMessage: b.mutation<FamilyMessage, { child_id: string; body: string }>({
+      queryFn: async ({ child_id, body }) => {
+        const { data: auth } = await supabase.auth.getUser();
+        const uid = auth.user!.id;
+        // snapshot do nome: profiles só deixa ler o próprio perfil
+        const { data: prof } = await supabase.from('profiles').select('name').eq('id', uid).single();
+        return run<FamilyMessage>(supabase.from('family_messages')
+          .insert({ child_id, body, author_id: uid, author_name: prof?.name ?? 'Alguém' })
+          .select().single());
+      },
+      invalidatesTags: ['Board'],
+    }),
     // Caderno de orientações (§11)
     guidanceNotes: b.query<GuidanceNote[], string>({
       queryFn: (childId) => run(supabase.from('guidance_notes')
@@ -458,6 +479,7 @@ export const {
   useWeeklyReportQuery, useComposeWeekQuery, useUpsertWeeklyReportMutation, useGenerateReportPdfMutation,
   useCareLinksQuery, useRevokeLinkMutation, useExportChildDataMutation,
   useGuidanceNotesQuery, useAddGuidanceNoteMutation, useAcknowledgeGuidanceMutation,
+  useFamilyMessagesQuery, useAddFamilyMessageMutation,
 } = api;
 
 // hook: criança selecionada (default = primeira)
