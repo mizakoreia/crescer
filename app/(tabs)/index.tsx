@@ -50,6 +50,12 @@ export default function Hoje() {
               </View>
             </Card>
 
+            <Link href="/diario" asChild>
+              <Pressable style={s.cta} accessibilityRole="button">
+                <Text style={s.ctaText}>＋ Registrar momento</Text>
+              </Pressable>
+            </Link>
+
             <Card>
               <Text style={[font.body, { fontWeight: '600', marginBottom: spacing.sm }]}>Hoje</Text>
               {daySummary.length > 0 ? (
@@ -134,6 +140,12 @@ export default function Hoje() {
 const s = StyleSheet.create({
   hero: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   heroText: { flex: 1 },
+  // objeto único (não array): filho direto de <Link asChild> usa Slot
+  cta: {
+    backgroundColor: colors.primary, borderRadius: 16, paddingVertical: spacing.md,
+    alignItems: 'center', justifyContent: 'center', minHeight: 56, marginBottom: spacing.sm,
+  },
+  ctaText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   pill: {
     backgroundColor: colors.primarySoft, borderRadius: 999,

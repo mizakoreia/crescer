@@ -7,7 +7,7 @@ Legenda: 💚 grátis · 💛 pago por uso (Claude API/transcrição) · ⚠️ 
 - [x] 1.1 Tela "Hoje" afetiva: foto + nome + idade calculada da `birthdate` (§2)
 - [x] 1.2 Cartão "resumo do dia" compondo `daily_records` de hoje (sem IA)
 - [x] 1.3 Cartão "Descobertas recentes" = últimas observações revisadas
-- [ ] 1.4 Botão principal único "Registrar momento" em destaque
+- [x] 1.4 Botão principal único "Registrar momento" em destaque (→ Diário)
 - [ ] 1.5 Foto: bucket Storage + upload + grava `photo_path` (respeita consent `media`)
 - [ ] 1.6 Exibir foto na Hoje e no topo do perfil
 
