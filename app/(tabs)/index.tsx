@@ -2,10 +2,10 @@ import { Text, ScrollView, Pressable, View, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Screen, Card, Chip, CriticalBanner, Avatar } from '../../src/ui';
-import { useMyChildrenQuery, useHealthQuery } from '../../src/api';
+import { useMyChildrenQuery, useHealthQuery, useDailyRecordsQuery } from '../../src/api';
 import { RootState, selectChild } from '../../src/store';
 import { supabase } from '../../src/supabase';
-import { formatAge } from '../../src/format';
+import { formatAge, summarizeDay } from '../../src/format';
 import { colors, spacing, font } from '../../src/theme';
 
 export default function Hoje() {
@@ -15,6 +15,9 @@ export default function Hoje() {
   const child = children.find((c) => c.id === childId);
   const { data: health } = useHealthQuery(childId!, { skip: !childId });
   const critical = health?.conditions.filter((c) => c.severity === 'critica') ?? [];
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: records = [] } = useDailyRecordsQuery({ childId: childId!, day: today }, { skip: !childId });
+  const daySummary = summarizeDay(records);
   const photoUri = child?.photo_path
     ? supabase.storage.from('child-photos').getPublicUrl(child.photo_path).data.publicUrl
     : null;
@@ -42,6 +45,21 @@ export default function Hoje() {
                 <Text style={font.title} numberOfLines={1}>{child.name}</Text>
                 <Text style={[font.body, { color: colors.inkSoft }]}>{formatAge(child.birthdate)}</Text>
               </View>
+            </Card>
+
+            <Card>
+              <Text style={[font.body, { fontWeight: '600', marginBottom: spacing.sm }]}>Hoje</Text>
+              {daySummary.length > 0 ? (
+                <View style={s.pills}>
+                  {daySummary.map((label) => (
+                    <View key={label} style={s.pill}>
+                      <Text style={s.pillText}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={font.small}>O dia ainda está começando. Registre o primeiro momento.</Text>
+              )}
             </Card>
             <View style={s.actions}>
               <Link href={`/saude/${child.id}`} asChild>
@@ -96,6 +114,12 @@ export default function Hoje() {
 const s = StyleSheet.create({
   hero: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   heroText: { flex: 1 },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  pill: {
+    backgroundColor: colors.primarySoft, borderRadius: 999,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+  },
+  pillText: { ...font.small, color: colors.primary, fontWeight: '600' },
   selector: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginVertical: spacing.sm },
   action: {

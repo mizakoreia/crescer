@@ -1,5 +1,30 @@
 // Formatação afetiva e não-clínica. Idade em linguagem natural PT-BR.
 
+// Substantivos afetivos por categoria (singular, plural) para o resumo do dia.
+const DAY_NOUN: Record<string, [string, string]> = {
+  alimentacao: ['refeição', 'refeições'],
+  sono: ['sono', 'sonos'],
+  higiene: ['troca', 'trocas'],
+  atividade: ['atividade', 'atividades'],
+  passeio: ['passeio', 'passeios'],
+  leitura: ['leitura', 'leituras'],
+  saude: ['registro de saúde', 'registros de saúde'],
+  observacao: ['observação', 'observações'],
+};
+
+// Resumo do dia sem IA: conta registros por categoria e devolve rótulos prontos
+// ("2 refeições", "1 passeio"). Ordena por quantidade, do maior para o menor.
+export function summarizeDay(records: { category: string }[]): string[] {
+  const byCat: Record<string, number> = {};
+  for (const r of records) byCat[r.category] = (byCat[r.category] ?? 0) + 1;
+  return Object.entries(byCat)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, n]) => {
+      const noun = DAY_NOUN[cat] ?? [cat, cat];
+      return `${n} ${n === 1 ? noun[0] : noun[1]}`;
+    });
+}
+
 // Idade a partir da data de nascimento (YYYY-MM-DD).
 // "12 dias" → "3 meses" → "2 anos e 4 meses" → "2 anos".
 export function formatAge(birthdate: string, now: Date = new Date()): string {
