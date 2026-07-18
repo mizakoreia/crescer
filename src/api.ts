@@ -341,6 +341,20 @@ export const api = createApi({
       },
       invalidatesTags: ['Obs'],
     }),
+    // observação manual (§5): fato/interpretação/continuidade preenchidos à mão,
+    // sem IA. author_id NOT NULL e exigido pela policy; origin 'manual'.
+    addObservation: b.mutation<Observation, {
+      child_id: string; fact: string; interpretation?: string; continuity?: string;
+      review_state?: 'draft' | 'done' | 'shared';
+    }>({
+      queryFn: async ({ review_state = 'draft', ...input }) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run<Observation>(supabase.from('pedagogical_observations')
+          .insert({ ...input, author_id: auth.user!.id, origin: 'manual', review_state })
+          .select().single());
+      },
+      invalidatesTags: ['Obs'],
+    }),
     updateObservation: b.mutation<Observation, Partial<Observation> & { id: string }>({
       queryFn: ({ id, ...patch }) =>
         run<Observation>(supabase.from('pedagogical_observations').update(patch).eq('id', id).select().single()),
@@ -368,7 +382,7 @@ export const {
   useCreateChildMutation, useCreateInvitationMutation, useAcceptInvitationMutation,
   useConsentsQuery, useGrantConsentMutation, useRevokeConsentMutation,
   useLivingEntriesQuery, useAddLivingEntryMutation,
-  useObservationsQuery, useEnrichObservationMutation, useUpdateObservationMutation,
+  useObservationsQuery, useEnrichObservationMutation, useUpdateObservationMutation, useAddObservationMutation,
   useHealthQuery, useAddHealthConditionMutation, useAddEmergencyContactMutation,
   useAddMedicationMutation, useAuthorizeMedicationMutation, useRecordAdministrationMutation,
   useAgendaQuery, useAddEventMutation, useAddChecklistItemMutation, useUpdateChecklistItemMutation,

@@ -16,7 +16,7 @@ Legenda: 💚 grátis · 💛 pago por uso (Claude API/transcrição) · ⚠️ 
        agua, humor, medicamento, momento_especial) (§4)
 - [ ] 2.2 Atualizar união TS `CATEGORIAS` + `LABEL` no diário
 - [ ] 2.3 Campos mínimos por categoria (ex.: quantidade em água/mamadeira)
-- [ ] 2.4 Form manual de Observação com fato / interpretação / continuidade
+- [x] 2.4 Form manual de Observação com fato / interpretação / continuidade
        separados, linguagem hipotética (§5) — sem gastar token
 
 ## Fase 3 — Memória e comunicação (💚, tabela nova + RLS)

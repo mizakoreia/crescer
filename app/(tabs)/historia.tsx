@@ -77,11 +77,17 @@ export default function Historia() {
           <Text style={font.small}>O perfil vivo cresce com o tempo — comece por Interesses.</Text>
         )}
 
+        <Text style={[font.title, { fontSize: 18, marginTop: spacing.md, marginBottom: spacing.sm }]}>
+          Observações de desenvolvimento
+        </Text>
+        <Link href="/observacao/nova" asChild>
+          <Pressable style={s.newObs} accessibilityRole="button">
+            <Text style={s.newObsText}>＋ Nova observação</Text>
+          </Pressable>
+        </Link>
+
         {observations.length > 0 && (
           <>
-            <Text style={[font.title, { fontSize: 18, marginTop: spacing.md, marginBottom: spacing.sm }]}>
-              Observações de desenvolvimento
-            </Text>
             {observations.map((o) => (
               <Link key={o.id} href={`/observacao/${o.id}`} asChild>
                 <Pressable accessibilityRole="button">
@@ -114,4 +120,10 @@ const s = StyleSheet.create({
     alignItems: 'center', minHeight: 48, justifyContent: 'center',
   },
   buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  // objeto único (não array): filho direto de <Link asChild> usa Slot
+  newObs: {
+    backgroundColor: colors.primarySoft, borderRadius: radius.md, padding: spacing.md,
+    alignItems: 'center', minHeight: 48, justifyContent: 'center', marginBottom: spacing.md,
+  },
+  newObsText: { ...font.body, color: colors.primary, fontWeight: '600' },
 });
