@@ -1,5 +1,20 @@
 // Formatação afetiva e não-clínica. Idade em linguagem natural PT-BR.
 
+// Rótulos de categoria do diário, compartilhados entre telas.
+export const CATEGORY_LABEL: Record<string, string> = {
+  alimentacao: 'Alimentação', mamadeira: 'Mamadeira', agua: 'Água', sono: 'Sono',
+  fralda: 'Fralda', higiene: 'Higiene', humor: 'Humor', atividade: 'Atividade',
+  passeio: 'Passeio', leitura: 'Leitura', saude: 'Saúde', observacao: 'Observação',
+  momento_especial: 'Momento especial',
+};
+
+// amount_text legível fora do diário (ml em bebidas, texto puro no resto).
+export function formatAmount(category: string, amount_text?: string | null): string {
+  if (!amount_text) return '';
+  if (category === 'mamadeira' || category === 'agua') return `${amount_text} ml`;
+  return amount_text;
+}
+
 // Substantivos afetivos por categoria (singular, plural) para o resumo do dia.
 const DAY_NOUN: Record<string, [string, string]> = {
   alimentacao: ['refeição', 'refeições'],

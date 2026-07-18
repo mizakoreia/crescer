@@ -37,6 +37,11 @@ export interface WeeklyReport {
   id: string; child_id: string; author_id: string; week_start: string; version: number;
   content: Record<string, string>; state: 'draft' | 'done' | 'shared'; shared_at: string | null; pdf_path: string | null;
 }
+export interface TimelineItem {
+  id: string; kind: 'record' | 'observation'; at: string;
+  category?: string; note?: string | null; amount_text?: string | null; isPrivate?: boolean;
+  obsId?: string; fact?: string; interpretation?: string | null;
+}
 export interface Observation {
   id: string; child_id: string; author_id: string; fact: string; context: string | null;
   interpretation: string | null; domains: string[]; continuity: string | null;
@@ -328,6 +333,35 @@ export const api = createApi({
       },
       invalidatesTags: ['Health'],
     }),
+    // linha do tempo (§7): registros e observações mesclados, mais recentes primeiro.
+    // Mídia entra aqui quando o upload existir (Fase 1.5).
+    timeline: b.query<TimelineItem[], string>({
+      queryFn: async (childId) => {
+        const [recs, obs] = await Promise.all([
+          supabase.from('daily_records')
+            .select('id,category,note,amount_text,occurred_at,visibility')
+            .eq('child_id', childId).order('occurred_at', { ascending: false }).limit(150),
+          supabase.from('pedagogical_observations')
+            .select('id,fact,interpretation,created_at,review_state')
+            .eq('child_id', childId).order('created_at', { ascending: false }).limit(100),
+        ]);
+        const err = recs.error ?? obs.error;
+        if (err) return { error: { message: err.message } };
+        const items: TimelineItem[] = [
+          ...(recs.data ?? []).map((r) => ({
+            id: `r-${r.id}`, kind: 'record' as const, at: r.occurred_at,
+            category: r.category, note: r.note, amount_text: r.amount_text,
+            isPrivate: r.visibility === 'private_professional',
+          })),
+          ...(obs.data ?? []).map((o) => ({
+            id: `o-${o.id}`, kind: 'observation' as const, at: o.created_at,
+            obsId: o.id, fact: o.fact, interpretation: o.interpretation,
+          })),
+        ].sort((a, b) => (a.at < b.at ? 1 : -1));
+        return { data: items };
+      },
+      providesTags: ['Daily', 'Obs'],
+    }),
     observations: b.query<Observation[], string>({
       queryFn: (childId) =>
         run(supabase.from('pedagogical_observations').select('*')
@@ -383,6 +417,7 @@ export const {
   useConsentsQuery, useGrantConsentMutation, useRevokeConsentMutation,
   useLivingEntriesQuery, useAddLivingEntryMutation,
   useObservationsQuery, useEnrichObservationMutation, useUpdateObservationMutation, useAddObservationMutation,
+  useTimelineQuery,
   useHealthQuery, useAddHealthConditionMutation, useAddEmergencyContactMutation,
   useAddMedicationMutation, useAuthorizeMedicationMutation, useRecordAdministrationMutation,
   useAgendaQuery, useAddEventMutation, useAddChecklistItemMutation, useUpdateChecklistItemMutation,

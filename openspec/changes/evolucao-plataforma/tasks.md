@@ -22,7 +22,8 @@ Legenda: 💚 grátis · 💛 pago por uso (Claude API/transcrição) · ⚠️ 
        separados, linguagem hipotética (§5) — sem gastar token
 
 ## Fase 3 — Memória e comunicação (💚, tabela nova + RLS)
-- [ ] 3.1 Linha do tempo: view cronológica de registros + mídia + observações (§7)
+- [x] 3.1 Linha do tempo: view cronológica de registros + observações, agrupada
+       por dia (§7). Mídia entra quando o upload existir (1.5).
 - [ ] 3.2 Marcar registro como "momento especial"; privados fora de compartilháveis
 - [ ] 3.3 Caderno de orientações: tabela + RLS + tela + confirmação de leitura (§11)
 - [ ] 3.4 Mural/recados família com histórico e autoria (§10)
