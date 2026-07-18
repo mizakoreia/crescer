@@ -1,5 +1,19 @@
-import { Text, View, Pressable, StyleSheet, ViewStyle } from 'react-native';
+import { Text, View, Image, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { colors, spacing, radius, font } from './theme';
+
+// Avatar afetivo: foto quando houver, senão inicial do nome num círculo suave.
+export function Avatar({ uri, name, size = 64 }: { uri?: string | null; name: string; size?: number }) {
+  const dim = { width: size, height: size, borderRadius: size / 2 };
+  if (uri) {
+    return <Image source={{ uri }} style={dim} accessibilityLabel={`Foto de ${name}`} />;
+  }
+  const initial = name.trim().charAt(0).toUpperCase() || '?';
+  return (
+    <View style={[s.avatar, dim]} accessibilityLabel={`${name}, sem foto`}>
+      <Text style={{ fontSize: size * 0.42, color: colors.primary, fontWeight: '700' }}>{initial}</Text>
+    </View>
+  );
+}
 
 export function Screen({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
@@ -56,6 +70,10 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     minHeight: 44, justifyContent: 'center',
+  },
+  avatar: {
+    backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.primary,
   },
   chipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   chipText: { ...font.body, color: colors.inkSoft },

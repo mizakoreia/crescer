@@ -1,10 +1,11 @@
 import { Text, ScrollView, Pressable, View, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { Screen, Card, Chip, CriticalBanner } from '../../src/ui';
+import { Screen, Card, Chip, CriticalBanner, Avatar } from '../../src/ui';
 import { useMyChildrenQuery, useHealthQuery } from '../../src/api';
 import { RootState, selectChild } from '../../src/store';
 import { supabase } from '../../src/supabase';
+import { formatAge } from '../../src/format';
 import { colors, spacing, font } from '../../src/theme';
 
 export default function Hoje() {
@@ -14,6 +15,9 @@ export default function Hoje() {
   const child = children.find((c) => c.id === childId);
   const { data: health } = useHealthQuery(childId!, { skip: !childId });
   const critical = health?.conditions.filter((c) => c.severity === 'critica') ?? [];
+  const photoUri = child?.photo_path
+    ? supabase.storage.from('child-photos').getPublicUrl(child.photo_path).data.publicUrl
+    : null;
 
   return (
     <Screen title="Hoje">
@@ -32,9 +36,12 @@ export default function Hoje() {
             {critical.map((c) => (
               <CriticalBanner key={c.id} text={`${c.name}${c.instruction ? ` — ${c.instruction}` : ''}`} />
             ))}
-            <Card>
-              <Text style={[font.body, { fontWeight: '600' }]}>{child.name}</Text>
-              <Text style={font.small}>Nascimento: {child.birthdate}</Text>
+            <Card style={s.hero}>
+              <Avatar uri={photoUri} name={child.name} size={72} />
+              <View style={s.heroText}>
+                <Text style={font.title} numberOfLines={1}>{child.name}</Text>
+                <Text style={[font.body, { color: colors.inkSoft }]}>{formatAge(child.birthdate)}</Text>
+              </View>
             </Card>
             <View style={s.actions}>
               <Link href={`/saude/${child.id}`} asChild>
@@ -87,6 +94,8 @@ export default function Hoje() {
 }
 
 const s = StyleSheet.create({
+  hero: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  heroText: { flex: 1 },
   selector: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginVertical: spacing.sm },
   action: {

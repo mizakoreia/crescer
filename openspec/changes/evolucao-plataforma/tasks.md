@@ -4,7 +4,7 @@ Ordem = maior impacto / menor custo / menor risco de banco primeiro.
 Legenda: 💚 grátis · 💛 pago por uso (Claude API/transcrição) · ⚠️ exige migration.
 
 ## Fase 1 — Alma do produto (💚, sem IA)
-- [ ] 1.1 Tela "Hoje" afetiva: foto + nome + idade calculada da `birthdate` (§2)
+- [x] 1.1 Tela "Hoje" afetiva: foto + nome + idade calculada da `birthdate` (§2)
 - [ ] 1.2 Cartão "resumo do dia" compondo `daily_records` de hoje (sem IA)
 - [ ] 1.3 Cartão "Descobertas recentes" = últimas observações revisadas
 - [ ] 1.4 Botão principal único "Registrar momento" em destaque

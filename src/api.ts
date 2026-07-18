@@ -9,7 +9,7 @@ const run = async <T>(
   return error ? { error: { message: error.message } } : { data: data as T };
 };
 
-export interface Child { id: string; name: string; birthdate: string; pronoun: string | null }
+export interface Child { id: string; name: string; birthdate: string; pronoun: string | null; photo_path: string | null }
 export interface DailyRecord {
   id: string; child_id: string; author_id: string; category: string;
   occurred_at: string; duration_min: number | null; amount_text: string | null;
@@ -61,7 +61,7 @@ export const api = createApi({
         const link = await supabase.from('care_links')
           .insert({ child_id: id, user_id: uid, role: 'professional' });
         if (link.error) return { error: { message: link.error.message } };
-        return { data: { id, name: input.name, birthdate: input.birthdate, pronoun: input.pronoun ?? null } };
+        return { data: { id, name: input.name, birthdate: input.birthdate, pronoun: input.pronoun ?? null, photo_path: null } };
       },
       invalidatesTags: ['Children'],
     }),
@@ -124,7 +124,7 @@ export const api = createApi({
       invalidatesTags: ['Consents'],
     }),
     myChildren: b.query<Child[], void>({
-      queryFn: () => run(supabase.from('children').select('id,name,birthdate,pronoun').order('name')),
+      queryFn: () => run(supabase.from('children').select('id,name,birthdate,pronoun,photo_path').order('name')),
       providesTags: ['Children'],
     }),
     dailyRecords: b.query<DailyRecord[], { childId: string; day: string }>({
