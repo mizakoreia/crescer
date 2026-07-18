@@ -93,6 +93,11 @@ export default function Hoje() {
                   <Text style={s.actionText}>Linha do tempo</Text>
                 </Pressable>
               </Link>
+              <Link href={`/caderno/${child.id}`} asChild>
+                <Pressable style={s.action} accessibilityRole="button">
+                  <Text style={s.actionText}>Caderno de orientações</Text>
+                </Pressable>
+              </Link>
               <Link href={`/saude/${child.id}`} asChild>
                 <Pressable style={s.actionHealth} accessibilityRole="button">
                   <Text style={[s.actionText, { color: colors.critical }]}>Saúde e emergência</Text>

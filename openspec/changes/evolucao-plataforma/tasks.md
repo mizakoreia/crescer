@@ -25,7 +25,8 @@ Legenda: 💚 grátis · 💛 pago por uso (Claude API/transcrição) · ⚠️ 
 - [x] 3.1 Linha do tempo: view cronológica de registros + observações, agrupada
        por dia (§7). Mídia entra quando o upload existir (1.5).
 - [ ] 3.2 Marcar registro como "momento especial"; privados fora de compartilháveis
-- [ ] 3.3 Caderno de orientações: tabela + RLS + tela + confirmação de leitura (§11)
+- [x] 3.3 Caderno de orientações: tabela + RLS + tela + confirmação de leitura (§11).
+       Informativo — medicamento/alergia continuam no módulo Saúde.
 - [ ] 3.4 Mural/recados família com histórico e autoria (§10)
 
 ## Fase 4 — IA (💛 pago, só depois de validar Fases 1–3)

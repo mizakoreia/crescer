@@ -37,6 +37,11 @@ export interface WeeklyReport {
   id: string; child_id: string; author_id: string; week_start: string; version: number;
   content: Record<string, string>; state: 'draft' | 'done' | 'shared'; shared_at: string | null; pdf_path: string | null;
 }
+export interface GuidanceNote {
+  id: string; child_id: string; section: string; title: string; body: string;
+  important: boolean; valid_until: string | null; created_by: string; created_at: string;
+  guidance_acknowledgements: { user_id: string; acknowledged_at: string }[];
+}
 export interface TimelineItem {
   id: string; kind: 'record' | 'observation'; at: string;
   category?: string; note?: string | null; amount_text?: string | null; isPrivate?: boolean;
@@ -51,7 +56,7 @@ export interface Observation {
 
 export const api = createApi({
   baseQuery: fakeBaseQuery<{ message: string }>(),
-  tagTypes: ['Children', 'Daily', 'Living', 'Obs', 'Health', 'Agenda', 'Work', 'Report', 'Consents'],
+  tagTypes: ['Children', 'Daily', 'Living', 'Obs', 'Health', 'Agenda', 'Work', 'Report', 'Consents', 'Guidance'],
   endpoints: (b) => ({
     createChild: b.mutation<Child, { name: string; birthdate: string; pronoun?: string }>({
       queryFn: async (input) => {
@@ -394,6 +399,34 @@ export const api = createApi({
         run<Observation>(supabase.from('pedagogical_observations').update(patch).eq('id', id).select().single()),
       invalidatesTags: ['Obs'],
     }),
+    // Caderno de orientações (§11)
+    guidanceNotes: b.query<GuidanceNote[], string>({
+      queryFn: (childId) => run(supabase.from('guidance_notes')
+        .select('*, guidance_acknowledgements(user_id, acknowledged_at)')
+        .eq('child_id', childId)
+        .order('important', { ascending: false }).order('created_at', { ascending: false })),
+      providesTags: ['Guidance'],
+    }),
+    addGuidanceNote: b.mutation<GuidanceNote, {
+      child_id: string; section: string; title: string; body: string;
+      important?: boolean; valid_until?: string | null;
+    }>({
+      queryFn: async (input) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run<GuidanceNote>(supabase.from('guidance_notes')
+          .insert({ ...input, created_by: auth.user!.id })
+          .select('*, guidance_acknowledgements(user_id, acknowledged_at)').single());
+      },
+      invalidatesTags: ['Guidance'],
+    }),
+    acknowledgeGuidance: b.mutation<unknown, string>({
+      queryFn: async (note_id) => {
+        const { data: auth } = await supabase.auth.getUser();
+        return run(supabase.from('guidance_acknowledgements')
+          .insert({ note_id, user_id: auth.user!.id }).select().single());
+      },
+      invalidatesTags: ['Guidance'],
+    }),
     livingEntries: b.query<LivingEntry[], string>({
       queryFn: (childId) =>
         run(supabase.from('living_profile_entries').select('*')
@@ -424,6 +457,7 @@ export const {
   useWorkQuery, useStartWorkPeriodMutation, useEndWorkPeriodMutation, useAddExpenseMutation,
   useWeeklyReportQuery, useComposeWeekQuery, useUpsertWeeklyReportMutation, useGenerateReportPdfMutation,
   useCareLinksQuery, useRevokeLinkMutation, useExportChildDataMutation,
+  useGuidanceNotesQuery, useAddGuidanceNoteMutation, useAcknowledgeGuidanceMutation,
 } = api;
 
 // hook: criança selecionada (default = primeira)
