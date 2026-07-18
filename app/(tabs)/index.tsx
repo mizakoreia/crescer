@@ -2,7 +2,7 @@ import { Text, ScrollView, Pressable, View, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Screen, Card, Chip, CriticalBanner, Avatar } from '../../src/ui';
-import { useMyChildrenQuery, useHealthQuery, useDailyRecordsQuery } from '../../src/api';
+import { useMyChildrenQuery, useHealthQuery, useDailyRecordsQuery, useObservationsQuery } from '../../src/api';
 import { RootState, selectChild } from '../../src/store';
 import { supabase } from '../../src/supabase';
 import { formatAge, summarizeDay } from '../../src/format';
@@ -18,6 +18,9 @@ export default function Hoje() {
   const today = new Date().toISOString().slice(0, 10);
   const { data: records = [] } = useDailyRecordsQuery({ childId: childId!, day: today }, { skip: !childId });
   const daySummary = summarizeDay(records);
+  const { data: observations = [] } = useObservationsQuery(childId!, { skip: !childId });
+  // "descobertas" = observações já revisadas (nunca rascunho), as 3 mais recentes
+  const discoveries = observations.filter((o) => o.review_state !== 'draft').slice(0, 3);
   const photoUri = child?.photo_path
     ? supabase.storage.from('child-photos').getPublicUrl(child.photo_path).data.publicUrl
     : null;
@@ -61,6 +64,23 @@ export default function Hoje() {
                 <Text style={font.small}>O dia ainda está começando. Registre o primeiro momento.</Text>
               )}
             </Card>
+
+            {discoveries.length > 0 && (
+              <Card>
+                <Text style={[font.body, { fontWeight: '600', marginBottom: spacing.sm }]}>Descobertas recentes</Text>
+                {discoveries.map((o) => (
+                  <Link key={o.id} href={`/observacao/${o.id}`} asChild>
+                    <Pressable style={s.discovery} accessibilityRole="button">
+                      <Text style={font.body} numberOfLines={2}>{o.fact}</Text>
+                      <Text style={font.small}>
+                        {new Date(o.created_at).toLocaleDateString('pt-BR')}
+                        {o.review_state === 'shared' ? ' · compartilhada' : ' · revisada'}
+                      </Text>
+                    </Pressable>
+                  </Link>
+                ))}
+              </Card>
+            )}
             <View style={s.actions}>
               <Link href={`/saude/${child.id}`} asChild>
                 <Pressable style={s.actionHealth} accessibilityRole="button">
@@ -120,6 +140,8 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
   },
   pillText: { ...font.small, color: colors.primary, fontWeight: '600' },
+  // objeto único (não array): filho direto de <Link asChild> usa Slot
+  discovery: { paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   selector: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginVertical: spacing.sm },
   action: {
