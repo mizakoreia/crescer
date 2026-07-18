@@ -16,7 +16,8 @@ Legenda: 💚 grátis · 💛 pago por uso (Claude API/transcrição) · ⚠️ 
        agua, humor, momento_especial) (§4). `medicamento` omitido de propósito:
        administração passa pelo módulo Saúde com trava de autorização.
 - [x] 2.2 Atualizar união TS `CATEGORIAS` + `LABEL` no diário + DAY_NOUN do resumo
-- [ ] 2.3 Campos mínimos por categoria (ex.: quantidade em água/mamadeira)
+- [x] 2.3 Campos mínimos por categoria: ml (mamadeira/água), humor (chips),
+       tipo de fralda (chips), duração só onde faz sentido — grava em amount_text
 - [x] 2.4 Form manual de Observação com fato / interpretação / continuidade
        separados, linguagem hipotética (§5) — sem gastar token
 
