@@ -3,13 +3,18 @@
 // Substantivos afetivos por categoria (singular, plural) para o resumo do dia.
 const DAY_NOUN: Record<string, [string, string]> = {
   alimentacao: ['refeição', 'refeições'],
+  mamadeira: ['mamadeira', 'mamadeiras'],
+  agua: ['oferta de água', 'ofertas de água'],
   sono: ['sono', 'sonos'],
+  fralda: ['fralda', 'fraldas'],
   higiene: ['troca', 'trocas'],
+  humor: ['registro de humor', 'registros de humor'],
   atividade: ['atividade', 'atividades'],
   passeio: ['passeio', 'passeios'],
   leitura: ['leitura', 'leituras'],
   saude: ['registro de saúde', 'registros de saúde'],
   observacao: ['observação', 'observações'],
+  momento_especial: ['momento especial', 'momentos especiais'],
 };
 
 // Resumo do dia sem IA: conta registros por categoria e devolve rótulos prontos

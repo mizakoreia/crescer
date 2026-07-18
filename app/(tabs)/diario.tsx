@@ -8,10 +8,15 @@ import {
 } from '../../src/api';
 import { colors, spacing, radius, font } from '../../src/theme';
 
-const CATEGORIAS = ['alimentacao', 'sono', 'higiene', 'atividade', 'passeio', 'leitura', 'saude', 'observacao'] as const;
+const CATEGORIAS = [
+  'alimentacao', 'mamadeira', 'agua', 'sono', 'fralda', 'higiene', 'humor',
+  'atividade', 'passeio', 'leitura', 'saude', 'observacao', 'momento_especial',
+] as const;
 const LABEL: Record<string, string> = {
-  alimentacao: 'Alimentação', sono: 'Sono', higiene: 'Higiene', atividade: 'Atividade',
+  alimentacao: 'Alimentação', mamadeira: 'Mamadeira', agua: 'Água', sono: 'Sono',
+  fralda: 'Fralda', higiene: 'Higiene', humor: 'Humor', atividade: 'Atividade',
   passeio: 'Passeio', leitura: 'Leitura', saude: 'Saúde', observacao: 'Observação',
+  momento_especial: 'Momento especial',
 };
 
 export default function Diario() {

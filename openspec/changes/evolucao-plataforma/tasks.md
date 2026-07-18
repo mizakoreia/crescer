@@ -12,9 +12,10 @@ Legenda: 💚 grátis · 💛 pago por uso (Claude API/transcrição) · ⚠️ 
 - [ ] 1.6 Exibir foto na Hoje e no topo do perfil
 
 ## Fase 2 — Registro mais rico (💚, ⚠️ migration)
-- [ ] 2.1 Migration: ampliar CHECK de `daily_records.category` (fralda, mamadeira,
-       agua, humor, medicamento, momento_especial) (§4)
-- [ ] 2.2 Atualizar união TS `CATEGORIAS` + `LABEL` no diário
+- [x] 2.1 Migration: ampliar CHECK de `daily_records.category` (fralda, mamadeira,
+       agua, humor, momento_especial) (§4). `medicamento` omitido de propósito:
+       administração passa pelo módulo Saúde com trava de autorização.
+- [x] 2.2 Atualizar união TS `CATEGORIAS` + `LABEL` no diário + DAY_NOUN do resumo
 - [ ] 2.3 Campos mínimos por categoria (ex.: quantidade em água/mamadeira)
 - [x] 2.4 Form manual de Observação com fato / interpretação / continuidade
        separados, linguagem hipotética (§5) — sem gastar token
