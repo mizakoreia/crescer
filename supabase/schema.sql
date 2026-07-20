@@ -490,3 +490,100 @@ $$;
 
 alter policy p_links_insert on care_links
   with check (user_id = auth.uid() and is_child_creator(child_id));
+
+
+-- ═══════════════════════════════════════════════════════════════
+-- 0004 — amplia categorias do diário
+-- ═══════════════════════════════════════════════════════════════
+-- Amplia as categorias de registro do diário (spec §4): fralda, mamadeira,
+-- água, humor, momento especial.
+--
+-- 'medicamento' é DELIBERADAMENTE omitido: administração de medicamento passa
+-- pelo módulo de Saúde, que exige autorização ativa do responsável
+-- (trigger require_active_med_auth). Um registro livre no diário burlaria essa
+-- trava de segurança.
+
+alter table daily_records drop constraint if exists daily_records_category_check;
+
+alter table daily_records add constraint daily_records_category_check
+  check (category in (
+    'alimentacao','sono','higiene','atividade','passeio','leitura','saude','observacao',
+    'fralda','mamadeira','agua','humor','momento_especial'
+  ));
+
+
+-- ═══════════════════════════════════════════════════════════════
+-- 0005 — caderno de orientações
+-- ═══════════════════════════════════════════════════════════════
+-- Caderno de orientações (§11): informações que costumam ficar espalhadas em
+-- mensagens. É informativo — NÃO é fonte de verdade para medicamento/alergia,
+-- que continuam no módulo Saúde com suas travas.
+
+create table guidance_notes (
+  id uuid primary key default gen_random_uuid(),
+  child_id uuid not null references children(id) on delete cascade,
+  section text not null check (section in
+    ('geral','alimentacao','sono','higiene','conforto','rotina','preferencias','saude','passeios','telas','contatos')),
+  title text not null,
+  body text not null,
+  important boolean not null default false,
+  valid_until date,
+  created_by uuid not null references profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table guidance_acknowledgements (  -- confirmação de leitura
+  id uuid primary key default gen_random_uuid(),
+  note_id uuid not null references guidance_notes(id) on delete cascade,
+  user_id uuid not null references profiles(id),
+  acknowledged_at timestamptz not null default now(),
+  unique (note_id, user_id)
+);
+
+-- helper security-definer: evita RLS recursiva ao checar o vínculo pela nota
+-- (lição do bug #2: policy que consulta outra tabela sob RLS)
+create function guidance_child(nid uuid) returns uuid
+language sql stable security definer set search_path = public as $$
+  select child_id from guidance_notes where id = nid;
+$$;
+
+alter table guidance_notes enable row level security;
+alter table guidance_acknowledgements enable row level security;
+
+-- notas: vínculo ativo lê; autor cria/edita/remove
+create policy p_guid_select on guidance_notes for select using (has_active_link(child_id));
+create policy p_guid_insert on guidance_notes for insert
+  with check (created_by = auth.uid() and has_active_link(child_id));
+create policy p_guid_update on guidance_notes for update using (created_by = auth.uid());
+create policy p_guid_delete on guidance_notes for delete using (created_by = auth.uid());
+
+-- confirmações: quem tem vínculo confirma a própria leitura e lê as dos outros
+create policy p_guidack_select on guidance_acknowledgements for select
+  using (has_active_link(guidance_child(note_id)));
+create policy p_guidack_insert on guidance_acknowledgements for insert
+  with check (user_id = auth.uid() and has_active_link(guidance_child(note_id)));
+
+
+-- ═══════════════════════════════════════════════════════════════
+-- 0006 — mural de recados da família
+-- ═══════════════════════════════════════════════════════════════
+-- Mural de recados da família (§10): feed simples, append-only (mantém histórico).
+-- author_name é gravado no momento do post — a policy de profiles só permite ler
+-- o próprio perfil, então snapshotar o nome evita embed nulo de outros usuários.
+
+create table family_messages (
+  id uuid primary key default gen_random_uuid(),
+  child_id uuid not null references children(id) on delete cascade,
+  author_id uuid not null references profiles(id),
+  author_name text not null,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table family_messages enable row level security;
+
+-- vínculo ativo lê; escreve como si mesmo. Sem update/delete: histórico preservado.
+create policy p_board_select on family_messages for select using (has_active_link(child_id));
+create policy p_board_insert on family_messages for insert
+  with check (author_id = auth.uid() and has_active_link(child_id));

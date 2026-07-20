@@ -20,8 +20,20 @@ Se teu usuário não for `Mizakoreia`: `git remote set-url origin https://github
 ## 2. Supabase (backend)
 
 1. <https://supabase.com> → **New project** (free tier). Guarda a senha do banco.
-2. SQL Editor → New query → cola **todo** o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) → **Run**. (São as 2 migrations juntas.)
+2. SQL Editor → New query → cola **todo** o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) → **Run**. (É o schema completo — migrations `0001`–`0006` juntas.)
 3. Settings → API → copia **Project URL** e **anon public key**.
+
+### Projeto já existente — aplicar só as migrations novas
+
+Se o banco já foi criado antes e falta atualizar, rode **só as migrations que faltam**, em ordem, uma por vez no SQL Editor:
+
+| Migration | O que adiciona |
+|---|---|
+| [`0004_expand_daily_categories.sql`](supabase/migrations/0004_expand_daily_categories.sql) | categorias fralda, mamadeira, água, humor, momento especial |
+| [`0005_guidance_notebook.sql`](supabase/migrations/0005_guidance_notebook.sql) | caderno de orientações + confirmação de leitura |
+| [`0006_family_board.sql`](supabase/migrations/0006_family_board.sql) | mural de recados da família |
+
+Cuidados: não rode a mesma migration duas vezes (`create table`/`add constraint` acusam duplicado); nenhuma apaga dado. Com a Supabase CLI, `supabase db push` aplica só o que falta.
 
 ## 3. Vercel (frontend)
 
@@ -55,8 +67,16 @@ Atalho: depois de `supabase login`, roda [`scripts/deploy.ps1`](scripts/deploy.p
 1. Abre o link do Vercel no celular/PC.
 2. Cria conta profissional → **Nova criança** → **Convidar responsável** (copia o código).
 3. Noutra conta (aba anônima) → **Aceitar convite** → liga os consentimentos (inclui *Recursos automáticos* pra IA).
-4. Volta na profissional → **Diário** registra o dia → **✨ Enriquecer** → revisa a narrativa.
+4. Volta na profissional → **Diário** registra o dia → em **Água/Mamadeira** aparece campo de ml, em **Humor** carinhas → **✨ Enriquecer** → revisa a narrativa.
 5. **Resumo semanal** → Revisar e compartilhar → **Gerar PDF**.
+
+### Telas de memória e comunicação (Fases 1–3, sem IA)
+
+6. **Hoje** mostra foto/inicial + idade + resumo do dia + descobertas + botão **Registrar momento**.
+7. **História → ＋ Nova observação** (fato/interpretação/continuidade) → salva → aparece em **Descobertas recentes** na Hoje.
+8. **Hoje → Linha do tempo** → registros e observações agrupados por dia.
+9. **Hoje → Caderno de orientações** → cria nota, marca importante, **Confirmar leitura**.
+10. **Hoje → Mural de recados** → publica recado, vê autoria e histórico.
 
 ## Domínio próprio (opcional, grátis)
 
