@@ -1,0 +1,36 @@
+schema: spec-driven
+
+# Contexto do projeto (migrado do antigo openspec/project.md)
+context: |
+  Crescer — app mobile-first (PT-BR) para babás/cuidadores e educadores da
+  primeira infância: diário de cuidado, documentação pedagógica, comunicação
+  com famílias e gestão profissional. Privacidade infantil por padrão (LGPD),
+  linguagem nunca diagnóstica.
+
+  Stack:
+  - Expo (React Native + TypeScript), Expo Router — abas Hoje/Diário/História/Agenda/Trabalho
+  - Redux Toolkit + RTK Query (src/api.ts centraliza queries/mutations)
+  - Supabase: Postgres com RLS por vínculo (care_links), Auth, Storage, Edge Functions
+  - IA (RF-09): Edge Function → Claude API (claude-sonnet-5)
+  - Deploy web: Vercel (expo export estático)
+
+  Convenções:
+  - Autorização SEMPRE no banco (RLS via care_links), nunca só na UI.
+  - Visibilidade explícita por conteúdo: private_professional | shareable_after_review
+    | shared | critical_care | administrative.
+  - Notas privadas nunca saem: fora de queries de família, PDFs, notificações, prompts de IA.
+  - Linguagem hipotética em conteúdo pedagógico ("pode favorecer"), nunca diagnóstico/comparação.
+  - Registros críticos (medicamentos, auditoria) append-only; correção por adendo.
+  - react-native-web: filho direto de <Link asChild> usa estilo objeto único (nunca array).
+  - Inserts sob RLS: setar coluna de autor (NOT NULL + exigida pela policy).
+
+  Estrutura:
+  - openspec/specs/ — uma spec por capability (estado desejado)
+  - openspec/changes/ — propostas de mudança em andamento
+  - app/ (rotas Expo Router), src/ (store/api/tokens/ui), supabase/ (migrations, edge functions)
+
+rules:
+  proposal:
+    - "Escreva em PT-BR."
+    - "Marque o custo de cada item — 💚 grátis (código) ou 💛 pago por uso (IA/transcrição)."
+    - "Nunca proponha linguagem diagnóstica, comparativa ou de desempenho sobre a criança."
