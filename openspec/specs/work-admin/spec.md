@@ -6,13 +6,29 @@ Horas, despesas e pagamentos do profissional. Visibilidade `administrative`.
 ## Requirements
 
 ### Requirement: Período de trabalho
-Registro SHALL ter início, fim, pausas (minutos), flag hora extra.
+Registro de período SHALL ter início, fim, pausas (minutos) e flag de hora extra.
+
+#### Scenario: Fechar período
+- **WHEN** o profissional encerra um período iniciado
+- **THEN** o período fica com início, fim e pausas registrados
 
 ### Requirement: Despesas
-Transporte e outras despesas com valor e descrição.
+Sistema SHALL registrar despesas (transporte e outras) com valor e descrição.
+
+#### Scenario: Registrar despesa
+- **WHEN** o profissional adiciona uma despesa de transporte com valor
+- **THEN** a despesa é registrada e listada no período
 
 ### Requirement: Status de pagamento
-Fluxo: pendente → conferido → pago. Confirmação das duas partes.
+Pagamento SHALL seguir o fluxo pendente → conferido → pago, com confirmação das duas partes.
+
+#### Scenario: Confirmação das duas partes
+- **WHEN** profissional e responsável confirmam um pagamento
+- **THEN** o status avança de forma consistente até "pago"
 
 ### Requirement: Exportação mensal
-Exportação simples (CSV) do mês por vínculo.
+Sistema SHALL permitir exportação simples (CSV) do mês por vínculo.
+
+#### Scenario: Exportar CSV
+- **WHEN** o profissional exporta o mês
+- **THEN** recebe um CSV com períodos e despesas do vínculo

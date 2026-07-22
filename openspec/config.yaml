@@ -1,33 +1,38 @@
 schema: spec-driven
 
-# Contexto do projeto (migrado do antigo openspec/project.md)
+# Contexto do projeto
 context: |
-  Crescer — app mobile-first (PT-BR) para babás/cuidadores e educadores da
-  primeira infância: diário de cuidado, documentação pedagógica, comunicação
-  com famílias e gestão profissional. Privacidade infantil por padrão (LGPD),
-  linguagem nunca diagnóstica.
+  Crescer — app (PT-BR) para babás/cuidadores e educadores da primeira infância:
+  diário de cuidado, documentação pedagógica, comunicação com famílias, memória da
+  infância e gestão profissional. Privacidade infantil por padrão (LGPD), linguagem
+  nunca diagnóstica.
 
-  Stack:
-  - Expo (React Native + TypeScript), Expo Router — abas Hoje/Diário/História/Agenda/Trabalho
-  - Redux Toolkit + RTK Query (src/api.ts centraliza queries/mutations)
-  - Supabase: Postgres com RLS por vínculo (care_links), Auth, Storage, Edge Functions
-  - IA (RF-09): Edge Function → Claude API (claude-sonnet-5)
-  - Deploy web: Vercel (expo export estático)
+  As specs descrevem COMPORTAMENTO (agnósticas de stack). O app está sendo
+  RECONSTRUÍDO sobre o template AI9 (repo mizakoreia/ai9). O protótipo validado
+  anterior era Expo + Supabase (RLS); o alvo agora é:
 
-  Convenções:
-  - Autorização SEMPRE no banco (RLS via care_links), nunca só na UI.
+  Stack alvo (AI9):
+  - Backend: Rails 8 API-only + Grape (módulos versionados /xxx/v1/*), PostgreSQL
+    (UUID), Redis + Sidekiq (jobs), Action Cable (realtime), JWT (devise-jwt) + RBAC.
+    Grape entities como contrato de resposta; erros padronizados; paginação.
+  - Frontend: React 18 + TypeScript + Vite, React Query (server-state) + Zustand,
+    Tailwind + shadcn/ui, Axios com interceptores de JWT/refresh, React Router,
+    react-i18next (pt-BR), temas dark/light, a11y AA+.
+  - IA: chamada server-side à Claude API (claude-sonnet-5) via serviço/job.
+
+  Invariantes de domínio (independentes de stack — valem na reconstrução):
+  - Autorização SEMPRE no servidor, por vínculo ativo (care_link); UI nunca é a barreira.
   - Visibilidade explícita por conteúdo: private_professional | shareable_after_review
     | shared | critical_care | administrative.
-  - Notas privadas nunca saem: fora de queries de família, PDFs, notificações, prompts de IA.
+  - Notas privadas nunca saem: fora de respostas à família, PDFs, notificações, prompts de IA.
   - Linguagem hipotética em conteúdo pedagógico ("pode favorecer"), nunca diagnóstico/comparação.
-  - Registros críticos (medicamentos, auditoria) append-only; correção por adendo.
-  - react-native-web: filho direto de <Link asChild> usa estilo objeto único (nunca array).
-  - Inserts sob RLS: setar coluna de autor (NOT NULL + exigida pela policy).
+  - Registros críticos (medicamentos, auditoria, mural) append-only; correção por adendo.
+  - Medicamento só com autorização ativa do responsável, validada no backend (não só UI).
+  - Mídia privada por padrão; exige consentimento; nunca usada para treino de IA sem consentimento.
 
-  Estrutura:
-  - openspec/specs/ — uma spec por capability (estado desejado)
+  Estrutura OpenSpec:
+  - openspec/specs/ — uma spec por capability (estado desejado, comportamento)
   - openspec/changes/ — propostas de mudança em andamento
-  - app/ (rotas Expo Router), src/ (store/api/tokens/ui), supabase/ (migrations, edge functions)
 
 rules:
   proposal:
